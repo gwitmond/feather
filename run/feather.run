@@ -1,0 +1,147 @@
+# Feather
+# config copied from hello_tutorial and lighttpd
+
+## Build
+
+set build_components { feather core init drivers/timer drivers/nic }
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+## Config
+
+append config {
+<config verbose="no">
+        <parent-provides>
+                <service name="ROM"/>
+                <service name="LOG"/>
+                <service name="CAP"/>
+                <service name="RAM"/>
+                <service name="RM"/>
+                <service name="CPU"/>
+                <service name="PD"/>
+                <service name="IRQ"/>
+                <service name="IO_PORT"/>
+                <service name="IO_MEM"/>
+                <service name="SIGNAL"/>
+        </parent-provides>
+        <default-route>
+                <any-service> <parent/> <any-child/> </any-service>
+        </default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="nic_drv">
+                <resource name="RAM" quantum="4M"/>
+                <provides><service name="Nic"/></provides>
+        </start>
+
+        <start name="feather">
+                <resource name="RAM" quantum="4M"/>
+                <provides><service name="Feather"/></provides>
+		<config ld_verbose="yes" >
+			<libc stdout="/dev/log" stderr="/dev/log"
+			       ip_addr="94.142.240.7" netmask="255.255.255.0" gateway="94.142.240.254">
+                                <vfs>	<dir name="dev"> <log/> </dir>
+					<tar name="websites.tar"/>
+				</vfs>
+                        </libc>
+		</config>
+        </start>
+}
+#			<libc stdout="/dev/log" stderr="/dev/log">
+#			<libc stdout="/dev/log" stderr="/dev/log"
+#			       ip_addr="94.142.240.7" netmask="255.255.255.0" gateway="94.142.240.254">
+
+
+#append_platform_drv_config
+# from: append_platform_drv_config
+# can't include that as I need to specify 1 of three ethernet cards.
+
+append config {
+        <start name="acpi_drv" >
+                <resource name="RAM" quantum="2M"/>
+                <route>
+                        <service name="LOG"> <parent/> </service>
+                        <service name="IO_MEM"> <parent/> </service>
+                        <service name="RM"> <parent/> </service>
+                        <service name="Report"> <child name="acpi_report_rom"/> </service>
+                </route>
+        </start>
+        <start name="acpi_report_rom" >
+                <binary name="report_rom"/>
+                <resource name="RAM" quantum="1M"/>
+                <provides>
+                        <service name="ROM" />
+                        <service name="Report" />
+                </provides>
+                <config>
+                        <rom> <policy label="platform_drv -> acpi" report="acpi_drv -> acpi"/> </rom>
+                </config>
+                <route>
+                        <service name="LOG"> <parent/> </service>
+                        <service name="SIGNAL"> <parent/> </service>
+                        <service name="CAP"> <parent/> </service>
+                        <service name="RM"> <parent/> </service>
+                </route>
+        </start>
+
+	<start name="platform_drv" >
+                <resource name="RAM" quantum="1M" constrain_phys="yes"/>
+                <provides>
+                        <service name="Platform"/>
+                </provides>
+                <route>
+                        <service name="ROM">
+                                <if-arg key="label" value="acpi"/> <child name="acpi_report_rom"/>
+                        </service>
+                        <any-service> <parent/> </any-service>
+                </route>
+                <config>
+                        <policy label="ps2_drv">  <device name="PS2"/> </policy>
+                        <policy label="fb_drv">        <pci class="VGA"/> </policy>
+                        <policy label="wifi_drv">      <pci class="WIFI"/> </policy>
+                        <policy label="usb_drv">       <pci class="USB"/> </policy>
+                        <policy label="ahci_drv">      <pci class="AHCI"/> </policy>
+                        <policy label="audio_out_drv"> <pci class="AUDIO"/>
+			                               <pci class="HDAUDIO"/> </policy>
+		        <policy label="nic_drv"  irq_mode="nomsi">
+                                <pci bus="0x22" device="0" function="0"/> </policy>
+		</config>
+        </start>}
+#                        <policy label="nic_drv">       <pci class="ETHERNET"/> </policy>
+#		        <policy label="nic_drv"  irq_mode="nomsi">
+#                                <pci bus="0x22" device="0" function="0"/> </policy>
+# end append_platform_drv_config
+
+
+append config {
+</config>
+}
+
+install_config $config
+
+## Boot image
+
+set boot_modules {
+	core init feather lwip.lib.so libc.lib.so ld.lib.so timer nic_drv websites.tar
+}
+
+# platform-specific modules
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+append_if [have_spec x86]     qemu_args " -net nic,model=e1000 "
+
+append qemu_args " -net user -redir tcp:5555::80 "
+append qemu_args " -nographic -serial mon:stdio "
+
+
+#run_genode_until forever
