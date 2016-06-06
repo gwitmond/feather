@@ -95,7 +95,15 @@ next:
     // first check for explicit errors
     if (st.err != 0) {
       printf("error %d - %s\n", st.err, st.err_mesg);
-      printf("%s\n", st.buffer);
+      char p = *++st.err_pos; // capture char at error
+      *st.err_pos = '\0';   // set to 0 to end correctly parsed part
+      // print that and the error part neatly separated
+      char* start = strrchr(st.buffer, '\n');
+      if (start == NULL) { start = st.buffer; }
+      else { start++; } // skip the \n found at strrchr
+      char* end = strchr(st.err_pos + 1, '\r');
+      if (end != NULL) { *end = '\0'; }
+      printf("Culprit: %s>>HERE>>%c%s\n", start, p, st.err_pos + 1);
       write_400(st.fd);
       close(st.fd);
       goto next;
@@ -220,7 +228,7 @@ void copy_contents(int fd, FILE* fh) {
 
 void strappend(char *buffer, size_t size, char* addendum) {
   if (addendum == NULL) {
-    printf("adding NULL string; ignoring\n");
+    printf("adding NULL string to %s; ignoring\n", buffer);
     return;
   }
   size_t length = strlen(buffer);

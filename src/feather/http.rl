@@ -56,7 +56,7 @@
 
   # non-debugging variants
   action START     { }
-  action PR        { }
+  action PR        { st->err_pos = fpc; } # set at every advance, points to parse error at abort
   action HH        { }
   action AH        { }
   action DEB       { }
@@ -95,18 +95,18 @@
   # ignore the port number for host headers
   host_header = "Host:" sp hostname $HH ( ':' digit+ )? crlf ;
   keepalive_header = "Connection: " ( [Kk]"eep-" [Aa]"live" | [Cc]"lose" ) crlf;
-  any_header = (( alpha ( alnum | '-' )* ) - ('Host'|'Connection')) $AH ':' sp 32..127+ crlf;
+  any_header = (( alpha ( alnum | '-' )* ) - ('Host'|'Connection')) $AH ':' 32..127* crlf;
 
   headers = ( host_header | keepalive_header | any_header)* ;
 
   # GET $URL HTTP1.1
   main := (
-    method >START sp url $PR sp version crlf
-    headers $PR
-    crlf $PR # end of header
+    method >START sp url sp version crlf
+    headers
+    crlf # end of header
     # 'body' 0
     # any* $PR  # eat body
-  ) ;
+  ) $PR ;
   }%%
 
   %% write data;
@@ -130,7 +130,6 @@ void http_parse(struct state *st)
   st->finished = p == pe;
 
   if (!st->finished) {
-    printf("Error\n");
     st->err = 400;
     st->err_mesg = "State machine did not finish: parse error.";
   }
