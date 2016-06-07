@@ -95,12 +95,24 @@ next:
     // first check for explicit errors
     if (st.err != 0) {
       printf("error %d - %s\n", st.err, st.err_mesg);
-      char p = *++st.err_pos; // capture char at error
+      char p;  // capture char that gave the parse error
+      if (st.err_pos == NULL ) {  // wrong http-method at pos 0
+	st.err_pos = st.buffer;
+        p = *st.err_pos;
+      } else {
+	p = *++st.err_pos;
+      }
       *st.err_pos = '\0';   // set to 0 to end correctly parsed part
-      // print that and the error part neatly separated
+
+      // Show from start of line
       char* start = strrchr(st.buffer, '\n');
-      if (start == NULL) { start = st.buffer; }
-      else { start++; } // skip the \n found at strrchr
+      if (start == NULL) {
+	start = st.buffer;
+      } else {
+	start++;  // skip the \n found at strrchr
+      }
+
+      // until the end of the line
       char* end = strchr(st.err_pos + 1, '\r');
       if (end != NULL) { *end = '\0'; }
       printf("Culprit: %s>>HERE>>%c%s\n", start, p, st.err_pos + 1);
