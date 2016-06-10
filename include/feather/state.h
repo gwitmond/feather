@@ -2,7 +2,7 @@
  * Expect very little in features.
  *
  * Copyright 2016, Guido Witmond <guido@witmond.nl>
- * License: AGPL v3.0 or later.
+ * License: GPL v3.0 or later.
  */
 
 struct state {
