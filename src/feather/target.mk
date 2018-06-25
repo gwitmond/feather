@@ -1,6 +1,6 @@
 TARGET = feather
 SRC_C = http.c connect.c
-LIBS = libc libc_lwip libc_lwip_nic_dhcp
+LIBS = libc libc_lwip libc_lwip_nic_dhcp posix
 
 http.c: http.rl
 	ragel -o $@ $<
