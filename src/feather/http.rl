@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include "feather/state.h"
 
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 // Parse requests like:
 //     "GET /index-of_files.html?arg=1&foo=bar&bla=%32baz HTTP/1.1\r\n"

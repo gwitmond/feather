@@ -17,10 +17,12 @@
 #include <netinet/in.h>
 #include "feather/state.h"
 
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
 // make the compiler happy
-void http_parse(struct state* st);
-char* determine_mimetype(char* path);
-void strappend(char*, size_t, char*);
+extern "C" void http_parse(struct state* st);
+const char* determine_mimetype(char* path);
+void strappend(char*, size_t, const char*);
 void copy_contents(int fd, FILE* fh);
 void write_400(int);
 void write_404(int);
@@ -29,8 +31,7 @@ void write_500(int);
 // the main server socket.
 int s;
 
-
-int main(int argc, char **argv) {
+int main() {
 
   struct sockaddr_in sa;
   memset(&sa, 0, sizeof(sa));
@@ -146,7 +147,7 @@ next:
     // Files are stored in /websites/<hostname>/<url>
     char path[1024];
     *path = '\0';
-    char *docroot = "/websites/";
+    const char *docroot = "/websites/";
     strappend(path, sizeof(path), docroot);
     strappend(path, sizeof(path), st.host);
     strappend(path, sizeof(path), st.url);
@@ -179,7 +180,7 @@ next:
       goto next;
     }
 
-    char *mimetype;
+    const char *mimetype;
     mimetype = determine_mimetype(path);
 
     // We have data for the request: give it to the caller
@@ -200,7 +201,7 @@ next:
 }
 
 void write_400(int fd) {
-  char *message =
+  const char *message =
     "HTTP/1.1 400 Bad Request\r\n"
     "\r\n"
     "Whadda ya think!\r\n";
@@ -208,7 +209,7 @@ void write_400(int fd) {
 }
 
 void write_404(int fd) {
-  char *message =
+  const char *message =
     "HTTP/1.1 404 Not Found\r\n"
     "\r\n"
     "I said 'snot here, captain.\r\n";
@@ -216,7 +217,7 @@ void write_404(int fd) {
 }
 
 void write_500(int fd) {
-  char *message =
+  const char *message =
     "HTTP/1.1 500 Internal Server Error\r\n"
     "\r\n"
     "Something went horribly wrong.\r\n";
@@ -238,7 +239,7 @@ void copy_contents(int fd, FILE* fh) {
   }
 }
 
-void strappend(char *buffer, size_t size, char* addendum) {
+void strappend(char *buffer, size_t size, const char* addendum) {
   if (addendum == NULL) {
     printf("adding NULL string to %s; ignoring\n", buffer);
     return;
@@ -248,7 +249,7 @@ void strappend(char *buffer, size_t size, char* addendum) {
   return;
 }
 
-char* determine_mimetype(char* path) {
+const char* determine_mimetype(char* path) {
   char* ext;
   ext = strrchr(path, '.');
   // printf("ext is: %s\n", ext);
